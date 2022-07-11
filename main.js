@@ -1,5 +1,5 @@
 import { GridRenderer, loadImage } from "./render.js";
-import { generate } from "./generate.js";
+import { generatePath } from "./generate.js";
 
 const canvas = document.getElementById("canvas");
 
@@ -17,7 +17,7 @@ const generateGrid = () => {
 
 generateGrid()
 
-generate(0, 0, [], grid)
+generatePath(0, 0, [], grid)
 
 const image = await loadImage();
 

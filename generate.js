@@ -1,8 +1,21 @@
-export const generate = (x, y, path, grid) => {
+export const generatePath = (x, y, path, grid) => {
+  path.push([x, y])
+  
+  console.log(x, y)
   let directions = generateDirectionOrder(x, y, grid);
   for(let direction of directions) {
-    let order = generateSignOrderForDirection(x, y, direction, grid);
+    grid[x][y].arrowDirection = direction;
+    let signs = generateSignOrderForDirection(x, y, direction, grid);
+    console.log(direction, "|", signs)
+    for(let sign of signs) {
+      if(generatePath(sign[0], sign[1], path, grid)) return true;
+    }
+    
+    delete grid[x][y].arrowDirection;
   }
+  
+  path.pop();
+  return false;
 }
 
 const generateDirectionOrder = (x, y, grid) => {
@@ -24,8 +37,9 @@ const generateSignOrderForDirection = (x, y, direction, grid) => {
   
   for(let multiplier = 1; find ; multiplier++) {
     let newSignCords = [x+direction[0]*multiplier, y+direction[1]*multiplier];
-    let newSign = followGridDirections(x, y, newSignCords[0], newSignCords[1], grid);
+    let newSign = grid[newSignCords[0]]?.[newSignCords[1]]
     if(newSign && !newSign.arrowDirection){
+      console.log("!!", newSignCords)
       result.push(newSignCords);
     }
     else find = false;
