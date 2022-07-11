@@ -55,6 +55,7 @@ export class GridRenderer {
     this.ctx.fillStyle = this.colors.plainSign;
     let { x, y } = this.calculateCords(xIndex, yIndex);
     this.ctx.fillRect(x, y, this.cellSize, this.cellSize);
+    if(sign.arrowDirection)
     this.drawArrow(x+this.arrowSize*1.3, y+this.arrowSize*1.3, this.arrowDirectionTranslator[this.compileArrowDirection(...sign.arrowDirection)]);
     this.ctx.fillStyle = this.colors.signText;
     this.ctx.fillText(sign.text, x, y+this.fontSize)

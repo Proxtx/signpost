@@ -1,12 +1,12 @@
 export const generatePath = (x, y, path, grid) => {
   path.push([x, y])
+  grid[x][y].text = path.length;
   
-  console.log(x, y)
+  if(grid.length * grid[0].length <= path.length) return true;
   let directions = generateDirectionOrder(x, y, grid);
   for(let direction of directions) {
     grid[x][y].arrowDirection = direction;
     let signs = generateSignOrderForDirection(x, y, direction, grid);
-    console.log(direction, "|", signs)
     for(let sign of signs) {
       if(generatePath(sign[0], sign[1], path, grid)) return true;
     }
@@ -38,9 +38,10 @@ const generateSignOrderForDirection = (x, y, direction, grid) => {
   for(let multiplier = 1; find ; multiplier++) {
     let newSignCords = [x+direction[0]*multiplier, y+direction[1]*multiplier];
     let newSign = grid[newSignCords[0]]?.[newSignCords[1]]
-    if(newSign && !newSign.arrowDirection){
-      console.log("!!", newSignCords)
-      result.push(newSignCords);
+    if(newSign){
+      if(!newSign.arrowDirection){
+        result.push(newSignCords);
+      }
     }
     else find = false;
   }
