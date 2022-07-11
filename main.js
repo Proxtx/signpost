@@ -10,7 +10,7 @@ const generateGrid = () => {
     let column = [];
     grid.push(column);
     for (let r = 0;r<5;r++){
-      column.push({text: "a+3", arrowDirection: [-1, -1]})
+      column.push({text: "a+3", arrrowDirection: [-1, -1]})
     }
   }
 }

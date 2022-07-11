@@ -1,5 +1,8 @@
 export const generate = (x, y, path, grid) => {
-  console.log(generateDirectionOrder(x, y, grid), x, y);
+  let directions = generateDirectionOrder(x, y, grid);
+  for(let direction of directions) {
+    let order = generateSignOrderForDirection(x, y, direction, grid);
+  }
 }
 
 const generateDirectionOrder = (x, y, grid) => {
@@ -13,6 +16,23 @@ const generateDirectionOrder = (x, y, grid) => {
   
   shuffleArray(order);
   return order;
+}
+
+const generateSignOrderForDirection = (x, y, direction, grid) => {
+  let result = [];
+  let find = true;
+  
+  for(let multiplier = 1; find ; multiplier++) {
+    let newSignCords = [x+direction[0]*multiplier, y+direction[1]*multiplier];
+    let newSign = followGridDirections(x, y, newSignCords[0], newSignCords[1], grid);
+    if(newSign && !newSign.arrowDirection){
+      result.push(newSignCords);
+    }
+    else find = false;
+  }
+  
+  shuffleArray(result);
+  return result;
 }
 
 const followGridDirections = (x, y, xOffset, yOffset, grid) => {
