@@ -1,4 +1,5 @@
 import { GridRenderer, loadImage } from "./render.js";
+import { generate } from "./generate.js";
 
 const canvas = document.getElementById("canvas");
 
@@ -9,12 +10,14 @@ const generateGrid = () => {
     let column = [];
     grid.push(column);
     for (let r = 0;r<5;r++){
-      column.push({text: "a+3", arrowDirection: "right"})
+      column.push({text: "a+3", arrowDirection: [-1, -1]})
     }
   }
 }
 
 generateGrid()
+
+generate(0, 0, [], grid)
 
 const image = await loadImage();
 

@@ -11,10 +11,14 @@ export class GridRenderer {
   }
   
   arrowDirectionTranslator = {
-    up: -90,
-    right: 0,
-    down: 90,
-    left: 180
+    north: -90,
+    northEast: -45,
+    east: 0,
+    southEast: 45,
+    south: 90,
+    southWest: 135,
+    west: 180,
+    northWest: -135
   }
   
   constructor (canvas, cellSize, grid, image) {
@@ -51,7 +55,7 @@ export class GridRenderer {
     this.ctx.fillStyle = this.colors.plainSign;
     let { x, y } = this.calculateCords(xIndex, yIndex);
     this.ctx.fillRect(x, y, this.cellSize, this.cellSize);
-    this.drawArrow(x+this.arrowSize*1.3, y+this.arrowSize*1.3, this.arrowDirectionTranslator[sign.arrowDirection]);
+    this.drawArrow(x+this.arrowSize*1.3, y+this.arrowSize*1.3, this.arrowDirectionTranslator[this.compileArrowDirection(...sign.arrowDirection)]);
     this.ctx.fillStyle = this.colors.signText;
     this.ctx.fillText(sign.text, x, y+this.fontSize)
   }
@@ -59,17 +63,44 @@ export class GridRenderer {
   drawArrow (x, y, deg) {
     let size = this.arrowSize;
     
-     this.ctx.save();
-     this.ctx.translate(x, y);
-     this.ctx.rotate((deg*Math.PI)/180);
-     this.ctx.drawImage(this.image, -size/2, -size/2, size, size);
-     this.ctx.restore();
+    this.ctx.save();
+    this.ctx.translate(x, y);
+    this.ctx.rotate((deg*Math.PI)/180);
+    this.ctx.drawImage(this.image, -size/2, -size/2, size, size);
+    this.ctx.restore();
   }
   
   calculateCords (x, y) {
     let xPos = x * this.cellSize + this.borderSize*x+this.borderSize;
     let yPos = y * this.cellSize + this.borderSize*y+this.borderSize;
     return {x: xPos, y: yPos};
+  }
+  
+  compileArrowDirection (x, y) {
+    let result = "";
+    switch (y) {
+      case -1:
+        result += "north"
+        break
+      case 1:
+        result += "south"
+        break
+    }
+  
+    switch (x) {
+      case -1:
+        result += "West"
+        break
+      case 1:
+        result += "East"
+        break
+    }
+  
+    if(y == 0) {
+      result = result.toLowerCase();
+    }
+  
+    return result;
   }
 }
 
