@@ -6,6 +6,13 @@ export class Game {
         signs: [
           [0, 1], [0, 2], [0, 3]
           ]
+      },
+      {
+        type: "final",
+        startAt: 5,
+        signs: [
+            [1, 1], [1, 2], [1, 3]
+          ]
       }
     ]
     
@@ -68,6 +75,11 @@ export class Game {
           sign.text = this.subPathIndexTranslator[connection.index]
           if(signCoordsIndex>0) sign.text+= "+"+signCoordsIndex
           break
+        
+        case "final":
+          sign.final = true;
+          sign.text = connection.startAt + Number(signCoordsIndex);
+          break;
       }
       
       if(signCoordsIndex > 0) sign.pointed = true;
