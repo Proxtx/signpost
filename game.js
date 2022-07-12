@@ -16,6 +16,11 @@ export class Game {
       }
     ]
     
+    highlight = {
+      type: "pointed",
+      signCoords: [2, 2]
+    }
+    
     resetDefault = {
       text: "",
       pointing: false,
@@ -49,8 +54,51 @@ export class Game {
   apply () {
     this.resetGrid();
     
+    this.applyHighlight();
     this.applyConnections();
     this.applyGiven();
+  }
+  
+  applyHighlight () {
+    if(!this.highlight) return;
+    switch (this.highlight.type) {
+      case "pointing":
+        this.applyPointingHighlight(this.highlight.signCoords);
+        break;
+      case "pointed":
+        this.applyPointedHighlight(this.highlight.signCoords)
+    }
+  }
+  
+  applyPointingHighlight (signCoords) {
+    this.applyDim();
+    this.grid[signCoords[0]][signCoords[1]].dim = false;
+    let pointedSigns = this.followSignDirection(signCoords);
+    
+    for(let pointedSignCoords of pointedSigns) {
+      this.grid[pointedSignCoords[0]][pointedSignCoords[1]].dim = false;
+    }
+  }
+  
+  applyPointedHighlight (signCoords) {
+    this.applyDim();
+    this.grid[signCoords[0]][signCoords[1]].dim = false;
+    for(let x in this.grid){
+      for(let y in this.grid[x]){
+        let pointedSigns = this.followSignDirection([x, y]);
+        for(let pointedSign of pointedSigns){
+          if(pointedSign[0] == signCoords[0] && pointedSign[1] == signCoords[1]) this.grid[x][y].dim = false;
+        }
+      }
+    }
+  }
+  
+  applyDim () {
+    for(let column of this.grid){
+      for(let sign of column) {
+        sign.dim = true;
+      }
+    }
   }
   
   applyGiven () {
@@ -86,5 +134,27 @@ export class Game {
       if(signCoordsIndex < connection.signs.length-1) sign.pointing = true
       
     }
+  }
+  
+  followSignDirection (signCoords) {
+    let result = [];
+    let find = true;
+    
+    let x = Number(signCoords[0]);
+    let y = Number(signCoords[1]);
+    let direction = this.grid[x][y].arrowDirection;
+    
+    if(!direction) return result;
+  
+    for(let multiplier = 1; find ; multiplier++) {
+      let newSignCords = [x+direction[0]*multiplier, y+direction[1]*multiplier];
+      let newSign = this.grid[newSignCords[0]]?.[newSignCords[1]]
+      if(newSign){
+          result.push(newSignCords);
+      }
+      else find = false;
+    }
+    
+    return result;
   }
 }

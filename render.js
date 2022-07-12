@@ -18,7 +18,7 @@ export class GridRenderer {
     plainSign: "#DEDFDE",
     signTextSubPath: "#000000",
     used: 0.45,
-    unused_target: "#9C9A9C",
+    unused: "#9C9A9C",
     subPathColors: ["#FF9E7B", "#94FB94", "#7BFFD6", "#946DDE", "#FFA600", "#84CEF7"],
     finalBackground: "#000000",
     error: "#FF0000",
@@ -104,7 +104,7 @@ export class GridRenderer {
     }
     else {
       if (sign.final){
-        this.ctx.fillStyle = this.colors.unused_target;
+        this.ctx.fillStyle = this.colors.unused;
       }
       else {
         this.ctx.fillStyle = this.colors.signTextSubPath;
@@ -147,7 +147,7 @@ export class GridRenderer {
     let posX = x + this.cellSize/4;
     let posY = y + this.cellSize/4*3;
     
-    this.ctx.fillStyle = this.colors.unused_target;
+    this.ctx.fillStyle = this.colors.unused;
     this.ctx.beginPath()
     this.ctx.arc(posX, posY, this.cellSize/20, 0, 2 * Math.PI, false);
     this.ctx.fill();
