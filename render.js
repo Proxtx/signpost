@@ -1,13 +1,26 @@
+const debugSign = {
+  text: "a",
+  arrowDirection: [1, 1], //or undefined
+  pointing: true, //pointing at a sign
+  pointed: true, //pointed at by a sign
+  final: false, //is this a final "number" sign? Aka black sign
+  error: false, //is there an error on the board including this sign?
+  dim: false, //are there other signs highlighted?
+  active: false, //is this sign active? aka edited / dragged
+  subPathIndex: 0 //is this a subpath (if not false ) then what index does it have
+}
+
 export class GridRenderer {
   borderSize = 2;
   colors = {
     borderColor: "#9C9E9C",
     plainSign: "#DEDFDE",
-    signText: "#000000",
-    unused: 1,
-    used: 0.5,
-    unused_targer: "#9C9A9C",
-    used_target: "#525552"
+    signTextSubPath: "#000000",
+    used: 0.45,
+    unused_target: "#9C9A9C",
+    subPathColors: ["#FF9E7B", "#94FB94", "#7BFFD6", "#946DDE", "#FFA600", "#84CEF7"],
+    finalBackground: "#000000",
+    error: "#FF0000"
   }
   
   arrowDirectionTranslator = {
@@ -44,6 +57,8 @@ export class GridRenderer {
     this.ctx.fillStyle = this.colors.borderColor;
     this.ctx.fillRect(0,0,this.canvas.width, this.canvas.height)
     
+    //this.grid[0][0] = debugSign;
+    
     for(let indexRow in this.grid) {
       for(let indexColumn in this.grid[indexRow]){
         this.renderSign(this.grid[indexRow][indexColumn], indexRow, indexColumn)
@@ -52,13 +67,86 @@ export class GridRenderer {
   }
   
   renderSign (sign, xIndex, yIndex){
-    this.ctx.fillStyle = this.colors.plainSign;
     let { x, y } = this.calculateCords(xIndex, yIndex);
-    this.ctx.fillRect(x, y, this.cellSize, this.cellSize);
+    this.ctx.save();
+    
+    this.ctx.fillStyle = this.colors.plainSign;
+    this.ctx.fillRect(x,y,this.cellSize,this.cellSize)
+    
+    if (sign.dim && !sign.final) {
+      this.ctx.globalAlpha -= 0.6
+    }
+    
+    this.renderSignBackground(sign, x, y)
+    this.drawArrowOfSign(sign, x, y);
+    this.drawPointedIndicator(sign, x, y)
+    this.renderSignText(sign, x, y)
+    
+    /*if(sign.dim&&!sign.final) {
+      this.ctx.fillStyle = "#white"
+      this.ctx.globalAlpha = 0.5;
+      this.ctx.fillRect(x,y,this.cellSize, this.cellSize)
+    }*/
+    
+    this.ctx.restore();
+  }
+  
+  renderSignText (sign, x, y) {
+    if(sign.dim && sign.final) return;
+    this.ctx.save();
+    
+    if(sign.error) {
+      this.ctx.fillStyle = this.colors.error;
+    }
+    else {
+      if (sign.final){
+        this.ctx.fillStyle = this.colors.unused_target;
+      }
+      else {
+        this.ctx.fillStyle = this.colors.signTextSubPath;
+      }
+      
+      if(sign.pointing && sign.pointed) this.ctx.globalAlpha -= this.colors.used;
+    }
+    
+    this.ctx.fillText(sign.text, x+this.cellSize/6, y+this.fontSize)
+    
+    this.ctx.restore();
+  }
+  
+  renderSignBackground (sign, x, y) {
+    this.ctx.fillStyle = this.colors.plainSign;
+    if (sign.final) this.ctx.fillStyle = this.colors.finalBackground;
+    else if (sign.subPathIndex !== false) {
+      this.ctx.fillStyle = this.colors.subPathColors[sign.subPathIndex]
+    } 
+    
+    this.ctx.fillRect(x, y, this.cellSize, this.cellSize)
+  }
+  
+  drawArrowOfSign (sign, x, y) {
+    if(sign.dim && sign.final) return;
+    this.ctx.save();
+    if(sign.pointing) {
+      this.ctx.globalAlpha -= this.colors.used;
+    }
+    
     if(sign.arrowDirection)
     this.drawArrow(x+this.arrowSize*1.3, y+this.arrowSize*1.3, this.arrowDirectionTranslator[this.compileArrowDirection(...sign.arrowDirection)]);
-    this.ctx.fillStyle = this.colors.signText;
-    this.ctx.fillText(sign.text, x, y+this.fontSize)
+    
+    this.ctx.restore();
+  }
+  
+  drawPointedIndicator (sign, x, y) {
+    
+    if(sign.pointed || (sign.final && sign.dim)) return;
+    let posX = x + this.cellSize/4;
+    let posY = y + this.cellSize/4*3;
+    
+    this.ctx.fillStyle = this.colors.unused_target;
+    this.ctx.beginPath()
+    this.ctx.arc(posX, posY, this.cellSize/20, 0, 2 * Math.PI, false);
+    this.ctx.fill();
   }
   
   drawArrow (x, y, deg) {
