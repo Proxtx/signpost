@@ -3,11 +3,12 @@ const debugSign = {
   arrowDirection: [1, 1], //or undefined
   pointing: true, //pointing at a sign
   pointed: true, //pointed at by a sign
-  final: false, //is this a final "number" sign? Aka black sign
+  final: true, //is this a final "number" sign? Aka black sign
   error: false, //is there an error on the board including this sign?
   dim: false, //are there other signs highlighted?
   active: false, //is this sign active? aka edited / dragged
-  subPathIndex: 0 //is this a subpath (if not false ) then what index does it have
+  subPathIndex: false, //is this a subpath (if not false ) then what index does it have
+  given: true //Was this number given to the player aka number should blue
 }
 
 export class GridRenderer {
@@ -20,7 +21,9 @@ export class GridRenderer {
     unused_target: "#9C9A9C",
     subPathColors: ["#FF9E7B", "#94FB94", "#7BFFD6", "#946DDE", "#FFA600", "#84CEF7"],
     finalBackground: "#000000",
-    error: "#FF0000"
+    error: "#FF0000",
+    given: "#ADAAFF",
+    givenUsed: "#4245EF"
   }
   
   arrowDirectionTranslator = {
@@ -82,21 +85,22 @@ export class GridRenderer {
     this.drawPointedIndicator(sign, x, y)
     this.renderSignText(sign, x, y)
     
-    /*if(sign.dim&&!sign.final) {
-      this.ctx.fillStyle = "#white"
-      this.ctx.globalAlpha = 0.5;
-      this.ctx.fillRect(x,y,this.cellSize, this.cellSize)
-    }*/
-    
     this.ctx.restore();
   }
   
   renderSignText (sign, x, y) {
-    if(sign.dim && sign.final) return;
+    if((sign.dim && sign.final) || !sign.text) return;
     this.ctx.save();
     
     if(sign.error) {
       this.ctx.fillStyle = this.colors.error;
+    }
+    else if(sign.given) {
+      this.ctx.fillStyle = this.colors.given;
+      
+      if (sign.pointing && sign.pointed) {
+        this.ctx.fillStyle = this.colors.givenUsed;
+      }
     }
     else {
       if (sign.final){
@@ -109,7 +113,7 @@ export class GridRenderer {
       if(sign.pointing && sign.pointed) this.ctx.globalAlpha -= this.colors.used;
     }
     
-    this.ctx.fillText(sign.text, x+this.cellSize/6, y+this.fontSize)
+    this.ctx.fillText(sign.text, x+this.cellSize/7, y+this.fontSize)
     
     this.ctx.restore();
   }

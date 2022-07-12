@@ -2,21 +2,60 @@ export const generatePath = (x, y, path, grid) => {
   path.push([x, y])
   grid[x][y].text = path.length;
   
-  if(grid.length * grid[0].length <= path.length) return true;
+  if(grid.length * grid[0].length <= path.length) {
+    delete grid[x][y].arrowDirection;
+    return true;
+  }
+  
+  grid[x][y].currentlyGenerating = true;
+  
   let directions = generateDirectionOrder(x, y, grid);
   for(let direction of directions) {
     grid[x][y].arrowDirection = direction;
     let signs = generateSignOrderForDirection(x, y, direction, grid);
     for(let sign of signs) {
-      if(generatePath(sign[0], sign[1], path, grid)) return true;
+      if(generatePath(sign[0], sign[1], path, grid)){
+        delete grid[x][y].currentlyGenerating;
+        return true;
+      }
     }
-    
-    delete grid[x][y].arrowDirection;
   }
+  
+  delete grid[x][y].currentlyGenerating
   
   path.pop();
   return false;
 }
+
+export const generateGrid = (width, height, corners) => {
+  let grid = [];
+  for(let x = 0;x<width;x++){
+    grid.push([])
+    for(let y = 0;y<height;y++){
+      grid[x].push({});
+    }
+  }
+  
+  let startX = 0;
+  let startY = 0;
+  if(!corners) {
+    startX = random(0, width-1);
+    startY = random(0, height-1);
+  }
+  let path;
+  let found = false;
+  while (!found){
+    path = [];
+    generatePath(startX, startY, path, grid);
+    let lastSign = path[path.length-1];
+    if(!corners || (lastSign[0] == width-1 && lastSign[1] == height-1)){
+      found = true;
+    }
+  }
+  
+  return {grid, path, given: [path[0], path[path.length-1]]}
+}
+
 
 const generateDirectionOrder = (x, y, grid) => {
   let order = [];
@@ -39,7 +78,7 @@ const generateSignOrderForDirection = (x, y, direction, grid) => {
     let newSignCords = [x+direction[0]*multiplier, y+direction[1]*multiplier];
     let newSign = grid[newSignCords[0]]?.[newSignCords[1]]
     if(newSign){
-      if(!newSign.arrowDirection){
+      if(!newSign.currentlyGenerating){
         result.push(newSignCords);
       }
     }

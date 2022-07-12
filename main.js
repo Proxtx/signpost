@@ -1,25 +1,15 @@
 import { GridRenderer, loadImage } from "./render.js";
-import { generatePath } from "./generate.js";
+import { generatePath, generateGrid } from "./generate.js";
+import { Game } from "./game.js";
 
 const canvas = document.getElementById("canvas");
 
-let grid = [];
-
-const generateGrid = () => {
-  for(let i = 0; i<5;i++){
-    let column = [];
-    grid.push(column);
-    for (let r = 0;r<5;r++){
-      column.push({text: "", arrrowDirection: [-1, -1]})
-    }
-  }
-}
-
-generateGrid()
-
-generatePath(0, 0, [], grid)
-
 const image = await loadImage();
 
-const renderer = new GridRenderer(canvas, 70, grid, image)
+let generateResult = generateGrid(5, 5, true);
+
+const renderer = new GridRenderer(canvas, 70, generateResult.grid, image);
+
+const game = new Game(renderer, generateResult)
+
 renderer.render();
