@@ -1,20 +1,6 @@
 export class GameState {
   gameStates = [
    [
-      {
-        type: "subPath",
-        index: 0,
-        signs: [
-          [0, 1], [0, 2], [0, 3]
-          ]
-      },
-      {
-        type: "final",
-        startAt: 5,
-        signs: [
-            [1, 1], [1, 2], [1, 3]
-          ]
-      }
     ]
   ]
   
@@ -40,6 +26,8 @@ export class GameState {
     this.generateResult = generateResult;
     this.grid = this.generateResult.grid;
     this.given = this.generateResult.given;
+    this.loadGameState();
+    this.createGivenConnections();
     this.apply();
   }
   
@@ -48,6 +36,18 @@ export class GameState {
       for(let signIndex in column) {
         column[signIndex] = {...column[signIndex], ...this.resetDefault}
       }
+    }
+  }
+  
+  createGivenConnections () {
+    for(let givenInfo of this.given){
+      this.connections.push({
+        type: "final",
+        startAt: givenInfo.number,
+        signs: [
+          givenInfo.sign
+          ]
+      })
     }
   }
   
@@ -106,12 +106,11 @@ export class GameState {
       let sign = this.grid[given.sign[0]][given.sign[1]];
       sign.given = true;
       sign.text = given.number;
-      sign.final = true;
     }
   }
   
   applyConnections () {
-    for(let connection of this.gameStates[this.gameStateIndex]) {
+    for(let connection of this.connections) {
       this.applyConnection(connection);
     }
   }
@@ -160,6 +159,245 @@ export class GameState {
     
     return result;
   }
+  
+  loadGameState () {
+    this.connections = this.gameStates[this.gameStateIndex];
+  }
+  
+  dulplicateGameState () {
+    if(this.gameStateIndex < this.gameStates.length-1) this.gameStates.splice(this.gameStateIndex+1);
+    this.gameStates.push(JSON.parse(JSON.stringify(this.gameStates[this.gameStateIndex])));
+    this.gameStateIndex++;
+  }
+  
+  undo (){
+    if(this.gameStateIndex>0) this.gameStateIndex--;
+  }
+  
+  redo() {
+    if(this.gameStateIndex < this.gameStates.length-1) this.gameStateIndex++;
+  }
+  
+  connect (sign1, sign2) {
+    this.dulplicateGameState();
+    if(!sign2) this.freeSign(sign1);
+    else if(this.hits(sign1, sign2)){
+      this.findAndExecuteConnectMethod(sign1, sign2)
+    }
+    
+    this.deleteUnusedConnections();
+  }
+  
+  findAndExecuteConnectMethod (sign1, sign2) {
+    let find1 = this.findConnection(sign1);
+    let find2 = this.findConnection(sign2);
+    
+    if(!find1 && !find2) this.createSubPath([sign1, sign2])
+    else if(find1 && !find2) this.mergeConnections(find1.connection, this.createSubPath(sign2), find1.index, 0)
+    else if(!find1 && find2) this.mergeConnections(this.createSubPath(sign1), find2.connection, 0, find2.index)
+    else if(find1 && find2) this.mergeConnections(find1.connection, find2.connection, find1.index, find2.index)
+    
+  }
+  
+  findConnection (sign) {
+    for(let connection of this.connections) {
+      for(let signOfConnectionIndex in connection.signs) {
+        let signOfConnection = connection.signs[signOfConnectionIndex];
+        if(sign[0] == signOfConnection[0] && sign[1] == signOfConnection[1]) return {connection, index: Number(signOfConnectionIndex)};
+      }
+    }
+    
+    return null;
+  }
+  
+  freeSign(sign) {
+    let foundConnection = this.findConnection(sign);
+    if(!foundConnection) return;
+    this.splitConnection(1, this.splitConnection(foundConnection.index, foundConnection.connection))
+  }
+  
+  mergeConnections (connection1, connection2, index1, index2) {
+    let newConnection1 = this.splitConnection(index1+1, connection1);
+    let newConnection2 = this.splitConnection(index2, connection2);
+    if(connection1.type == "subPath" && newConnection2.type == "subPath") this.mergeSubPaths(connection1, newConnection2);
+    else if (connection1.type == newConnection2.type) {
+      return;
+    }
+    else if(connection1.type == "final") {
+      this.mergeFromFinalConnection(connection1, newConnection2)
+    }
+    else {
+      this.mergeOntoFinalConnection(newConnection2,  connection1)
+    }
+  }
+  
+  mergeOntoFinalConnection (finalConnection, subPath) {
+    finalConnection.signs = subPath.signs.concat(finalConnection.signs);
+    finalConnection.startAt -= subPath.signs.length;
+    subPath.signs = [];
+  }
+  
+  mergeFromFinalConnection (finalConnection, subPath) {
+    finalConnection.signs = finalConnection.signs.concat(subPath.signs)
+    subPath.signs = [];
+  }
+  
+  mergeSubPaths (subPath1, subPath2) {
+    let index;
+    
+    if(subPath1.signs.length >= subPath2.signs.length) {
+      index = subPath1.index;
+    }
+    else {
+      index = subPath2.index;
+    }
+    
+    subPath1.signs = subPath1.signs.concat(subPath2.signs);
+    subPath2.signs = [];
+    subPath1.index = index;
+  }
+  
+  splitConnection (split, connection) {
+    switch (connection.type){
+      case "final":
+        return this.splitFinalConnection(split, connection);
+        break;
+      case "subPath":
+        return this.splitSubPath(split, connection);
+        break;
+    }
+  }
+  
+  splitFinalConnection (split, connection) {
+    let splitSigns = connection.signs.splice(split);
+    let splitIsFinal = this.signArrayIncludesGiven(splitSigns);
+    let originalIsFinal = this.signArrayIncludesGiven(connection.signs);
+    
+    if(splitIsFinal && originalIsFinal) {
+      return this.createFinalConnection(splitSigns)
+    }
+    else if(originalIsFinal) {
+      return this.createSubPath(splitSigns);
+    }
+    else {
+      let subPath = this.createSubPath(connection.signs);
+      connection.signs = splitSigns;
+      connection.startAt = this.evaluateStartNumerOfFinalConnection(splitSigns);
+      return connection;
+    }
+    
+  }
+  
+  signArrayIncludesGiven (signs) {
+    for(let signCoords of signs) {
+      if(this.grid[signCoords[0]][signCoords[1]].given){
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  createFinalConnection (signs) {
+    if(!Array.isArray(signs[0])) signs = [signs];
+    let startAt = this.evaluateStartNumerOfFinalConnection(signs);
+    let connection = {
+      type: "final",
+      startAt,
+      signs
+    }
+    this.connections.push(connection)
+    
+    return connection;
+  }
+  
+  evaluateStartNumerOfFinalConnection (signs) {
+    for(let signCoordsIndex in signs) {
+      let signCoords = signs[signCoordsIndex];
+      let sign = this.grid[signCoords[0]][signCoords[1]]
+      if(sign.given) return sign.text - signCoordsIndex;
+    }
+  }
+  
+  splitSubPath(split, connection) {
+    let splitSigns;
+    if(connection.signs.length - split > split) {
+      splitSigns = connection.signs.splice(0, split)
+      this.createSubPath(splitSigns);
+      return connection;
+    }
+    else {
+      splitSigns = connection.signs.splice(split);
+      return this.createSubPath(splitSigns)
+    }
+  }
+  
+  createSubPath (signs, customIndex) {
+    if(!Array.isArray(signs[0])) signs = [signs];
+    let index = customIndex ? customIndex : this.findSmallesSubPathIndex();
+    let connection = {
+      type: "subPath",
+      index,
+      signs
+    }
+    this.connections.push(connection)
+    return connection;
+  }
+  
+  findSmallesSubPathIndex () {
+    let smallest = 0;
+    let searching = true;
+    while(searching) {
+      let found = false;
+      for(let connection of this.connections) {
+        if(connection.type == "subPath" && connection.index == smallest) {
+          smallest++;
+          found = true;
+          break;
+        }
+      }
+      if(!found) searching = false;
+    }
+    
+    return smallest;
+  }
+  
+  deleteUnusedConnections () {
+    for(let connectionIndex = 0; connectionIndex < this.connections.length;connectionIndex++) {
+      let connection = this.connections[connectionIndex];
+      if(connection.signs.length > 1) continue;
+      if(connection.type == "subPath") {
+        this.connections.splice(connectionIndex, 1);
+        connectionIndex--;
+      }
+      
+      else if(!this.signArrayIncludesGiven(connection.signs)) {
+        this.connections.splice(connectionIndex, 1)
+        connectionIndex--;
+      }
+    }
+  }
+  
+  hits (sign1, sign2) {
+    let hits = false;
+    let multiplier = 1;
+    let arrowDirection = this.grid[sign1[0]][sign1[1]].arrowDirection;
+    
+    if(!arrowDirection) return false;
+    
+    while(true) {
+      let coords = [sign1[0]+multiplier*arrowDirection[0], sign1[1]+multiplier*arrowDirection[1]];
+      if(!this.grid[coords[0]]?.[coords[1]]) break;
+      if(coords[0] == sign2[0] && coords[1] == sign2[1]) {
+        hits = true;
+        break;
+      }
+      
+      multiplier++;
+    }
+    
+    return hits;
+  }
 }
 
 export class Game {
@@ -190,6 +428,8 @@ export class InteractionEngine {
     this.type = {long: "pointed", short: "pointing"}[this.interaction.type];
     this.activeSign = this.evaluateSign(this.interaction.startX, this.interaction.startY);
     
+    if(!this.activeSign) return;
+    
     this.gameState.highlight = {
       type: this.type,
       signCoords: this.activeSign
@@ -201,12 +441,15 @@ export class InteractionEngine {
   }
   
   interactionMove () {
-    
+    if(!this.activeSign) return;
   }
   
   interactionEnd () {
     this.gameState.highlight = null;
-    this.display()
+    if(this.activeSign){
+      this.gameState.connect(this.activeSign, this.evaluateSign(this.interaction.x, this.interaction.y))
+    }
+    this.display();
   }
   
   evaluateSign (x, y) {
@@ -231,6 +474,8 @@ export class Interaction {
   x = null;
   y = null;
   active = false;
+  startX = null;
+  startY = null;
   
   init = null;
   move = null;
