@@ -1,5 +1,6 @@
-export class Game {
-  connections = [
+export class GameState {
+  gameStates = [
+   [
       {
         type: "subPath",
         index: 0,
@@ -15,11 +16,11 @@ export class Game {
           ]
       }
     ]
+  ]
+  
+  gameStateIndex = 0;
     
-    highlight = {
-      type: "pointed",
-      signCoords: [2, 2]
-    }
+    highlight = null;
     
     resetDefault = {
       text: "",
@@ -35,9 +36,8 @@ export class Game {
     
     subPathIndexTranslator = "abcdefghijklmnopqrstuvwxyz".split("");
   
-  constructor (render, generateResult){
+  constructor (generateResult){
     this.generateResult = generateResult;
-    this.render = render;
     this.grid = this.generateResult.grid;
     this.given = this.generateResult.given;
     this.apply();
@@ -102,13 +102,16 @@ export class Game {
   }
   
   applyGiven () {
-    for(let givenSignCoords of this.given) {
-      this.grid[givenSignCoords[0]][givenSignCoords[1]].given = true
+    for(let given of this.given) {
+      let sign = this.grid[given.sign[0]][given.sign[1]];
+      sign.given = true;
+      sign.text = given.number;
+      sign.final = true;
     }
   }
   
   applyConnections () {
-    for(let connection of this.connections) {
+    for(let connection of this.gameStates[this.gameStateIndex]) {
       this.applyConnection(connection);
     }
   }
@@ -156,5 +159,142 @@ export class Game {
     }
     
     return result;
+  }
+}
+
+export class Game {
+  constructor (renderer, generateResult) {
+    this.generateResult = generateResult;
+    this.renderer = renderer;
+    this.gameState = new GameState(this.generateResult);
+    this.InteractionEngine = new InteractionEngine(this.renderer, this.gameState)
+  }
+}
+
+export class InteractionEngine {
+  
+  type = null;
+  startTile = null;
+  
+  constructor (renderer, gameState) {
+    this.renderer = renderer;
+    this.gameState = gameState;
+    this.interaction = new Interaction(this.renderer.canvas);
+    
+    this.interaction.init = this.interactionInit.bind(this);
+    this.interaction.move = this.interactionMove.bind(this);
+    this.interaction.end = this.interactionEnd.bind(this);
+  }
+  
+  interactionInit () {
+    this.type = {long: "pointed", short: "pointing"}[this.interaction.type];
+    this.activeSign = this.evaluateSign(this.interaction.startX, this.interaction.startY);
+    
+    this.gameState.highlight = {
+      type: this.type,
+      signCoords: this.activeSign
+    }
+      
+    if(this.type == "pointed")
+      navigator.vibrate(50)
+    this.display();
+  }
+  
+  interactionMove () {
+    
+  }
+  
+  interactionEnd () {
+    this.gameState.highlight = null;
+    this.display()
+  }
+  
+  evaluateSign (x, y) {
+    let xCoord = Math.floor((x-this.renderer.padding) / (this.renderer.borderSize + this.renderer.cellSize));
+    
+    let yCoord = Math.floor((y-this.renderer.borderSize*0.5-this.renderer.padding) / (this.renderer.borderSize + this.renderer.cellSize));
+    
+    if(this.gameState.grid[xCoord]?.[yCoord])
+      return [xCoord, yCoord]
+    
+    return null;
+  }
+  
+  display () {
+    this.gameState.apply();
+    this.renderer.render();
+  }
+}
+
+export class Interaction {
+  type = null;
+  x = null;
+  y = null;
+  active = false;
+  
+  init = null;
+  move = null;
+  end = null;
+  
+  longPressDelay = 300;
+  shortPressDist = 5;
+  
+  constructor (element) {
+    this.element = element;
+    this.element.addEventListener("touchstart", (e) => {
+      const coords = this.getRelativeCoordinates(e.touches[0].clientX, e.touches[0].clientY);
+      this.handleStart(coords[0], coords[1])
+    })
+    this.element.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      const coords = this.getRelativeCoordinates(e.touches[0].clientX, e.touches[0].clientY);
+      this.handleMove(coords[0], coords[1])
+    })
+    this.element.addEventListener("touchend", (e) => this.handleEnd())
+    this.element.addEventListener("cancel", (e) => this.handleEnd())
+  }
+  
+  getRelativeCoordinates(clientX, clientY) {
+    const rect = this.element.getBoundingClientRect()
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    
+    return [x, y];
+  }
+  
+  handleStart (x, y){
+    this.x = x;
+    this.y = y;
+    this.startX = x;
+    this.startY = y;
+    this.active = true;
+    
+    this.timeout = setTimeout(() => this.activate("long"), this.longPressDelay);
+  }
+  
+  handleMove (x, y) {
+    this.x = x;
+    this.y = y;
+    
+    if(this.type) return this.move && this.move(this);
+    
+    let dist = Math.sqrt((this.x-this.startX)^2 + (this.y-this.startY)^2);
+    
+    if(dist > this.shortPressDist) return;
+    this.activate("short")
+  }
+  
+  handleEnd () {
+    this.type = null;
+    this.active = null;
+    clearTimeout(this.timeout)
+    this.end && this.end(this)
+  }
+  
+  activate (type) {
+    if(this.type) return;
+    clearTimeout(this.timeout)
+    this.type = type;
+    this.init && this.init(this);
   }
 }

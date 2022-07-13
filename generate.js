@@ -9,15 +9,12 @@ export const generatePath = (x, y, path, grid) => {
   
   grid[x][y].currentlyGenerating = true;
   
-  let directions = generateDirectionOrder(x, y, grid);
-  for(let direction of directions) {
-    grid[x][y].arrowDirection = direction;
-    let signs = generateSignOrderForDirection(x, y, direction, grid);
-    for(let sign of signs) {
-      if(generatePath(sign[0], sign[1], path, grid)){
-        delete grid[x][y].currentlyGenerating;
-        return true;
-      }
+  let signs = generatePossibleSigns(x, y, grid);
+  for(let sign of signs) {
+    grid[x][y].arrowDirection = sign.direction;
+    if(generatePath(sign.sign[0], sign.sign[1], path, grid)){
+      delete grid[x][y].currentlyGenerating;
+      return true;
     }
   }
   
@@ -53,7 +50,22 @@ export const generateGrid = (width, height, corners) => {
     }
   }
   
-  return {grid, path, given: [path[0], path[path.length-1]]}
+  return {grid, path, given: [{sign: path[0], number: 1}, {sign: path[path.length-1], number: path.length}]}
+}
+
+const generatePossibleSigns = (x, y, grid) => {
+  let result = [];
+  
+  let directions = generateDirectionOrder(x, y, grid);
+  for(let direction of directions) {
+    let signs = generateSignOrderForDirection(x, y, direction, grid);
+    for(let sign of signs) {
+      result.push({direction, sign})
+    }
+  }
+  
+  shuffleArray(result);
+  return result;
 }
 
 

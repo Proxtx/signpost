@@ -23,7 +23,8 @@ export class GridRenderer {
     finalBackground: "#000000",
     error: "#FF0000",
     given: "#ADAAFF",
-    givenUsed: "#4245EF"
+    givenUsed: "#4245EF",
+    backgroundColor: "#000000"
   }
   
   arrowDirectionTranslator = {
@@ -37,18 +38,22 @@ export class GridRenderer {
     northWest: -135
   }
   
-  constructor (canvas, cellSize, grid, image) {
+  constructor (canvas, cellSize, padding, grid, image) {
     this.canvas = canvas;
     this.cellSize = cellSize;
     this.grid = grid;
     this.image = image;
     this.arrowSize = this.cellSize / 1.7;
+    this.padding = padding;
     this.canvasSetup();
   }
   
   canvasSetup () {
-    this.canvas.width = this.grid.length*this.cellSize+this.borderSize * this.grid.length + this.borderSize;
-    this.canvas.height = this.grid[0].length*this.cellSize+this.borderSize * this.grid[0].length + this.borderSize;
+    this.gridWidth = this.grid.length*(this.cellSize+this.borderSize) + this.borderSize;
+    this.gridHeight = this.grid[0].length*(this.cellSize+this.borderSize) + this.borderSize;
+    
+    this.canvas.width = this.gridWidth + this.padding * 2;
+    this.canvas.height = this.gridHeight + this.padding * 2;
     
     this.ctx = this.canvas.getContext("2d");
     
@@ -57,8 +62,14 @@ export class GridRenderer {
   }
   
   render () {
-    this.ctx.fillStyle = this.colors.borderColor;
+    this.ctx.fillStyle = this.colors.backgroundColor;
     this.ctx.fillRect(0,0,this.canvas.width, this.canvas.height)
+    
+    this.ctx.save()
+    this.ctx.translate(this.padding, this.padding);
+    
+    this.ctx.fillStyle = this.colors.borderColor;
+    this.ctx.fillRect(0, 0, this.gridWidth, this.gridHeight)
     
     //this.grid[0][0] = debugSign;
     
@@ -67,6 +78,8 @@ export class GridRenderer {
         this.renderSign(this.grid[indexRow][indexColumn], indexRow, indexColumn)
       }
     }
+    
+    this.ctx.restore();
   }
   
   renderSign (sign, xIndex, yIndex){
