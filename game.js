@@ -106,6 +106,12 @@ export class GameState {
       let sign = this.grid[given.sign[0]][given.sign[1]];
       sign.given = true;
       sign.text = given.number;
+      if(given.number == 1){
+        sign.pointed = true;
+      }
+      else if (!sign.arrowDirection) {
+        sign.pointing = true;
+      }
     }
   }
   
