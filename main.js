@@ -6,7 +6,7 @@ const canvas = document.getElementById("canvas");
 
 const image = await loadImage();
 
-let generateResult = generateGrid(5, 5, true);
+let generateResult = generateGrid(2, 2, true);
 
 const renderer = new GridRenderer(canvas, 70, 20, generateResult.grid, image);
 

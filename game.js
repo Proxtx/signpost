@@ -168,14 +168,17 @@ export class GameState {
     if(this.gameStateIndex < this.gameStates.length-1) this.gameStates.splice(this.gameStateIndex+1);
     this.gameStates.push(JSON.parse(JSON.stringify(this.gameStates[this.gameStateIndex])));
     this.gameStateIndex++;
+    this.loadGameState();
   }
   
   undo (){
     if(this.gameStateIndex>0) this.gameStateIndex--;
+    this.loadGameState();
   }
   
   redo() {
     if(this.gameStateIndex < this.gameStates.length-1) this.gameStateIndex++;
+    this.loadGameState();
   }
   
   connect (sign1, sign2) {
@@ -185,12 +188,15 @@ export class GameState {
       this.findAndExecuteConnectMethod(sign1, sign2)
     }
     
+    this.resolveFinalConnections();
     this.deleteUnusedConnections();
   }
   
   findAndExecuteConnectMethod (sign1, sign2) {
     let find1 = this.findConnection(sign1);
     let find2 = this.findConnection(sign2);
+    
+    if(find1 && find2 && find1.connection == find2.connection) return;
     
     if(!find1 && !find2) this.createSubPath([sign1, sign2])
     else if(find1 && !find2) this.mergeConnections(find1.connection, this.createSubPath(sign2), find1.index, 0)
@@ -217,9 +223,11 @@ export class GameState {
   }
   
   mergeConnections (connection1, connection2, index1, index2) {
+    let oneConnectionWasFinal = connection1.type == "final" || connection2.type == "final"
     let newConnection1 = this.splitConnection(index1+1, connection1);
     let newConnection2 = this.splitConnection(index2, connection2);
-    if(connection1.type == "subPath" && newConnection2.type == "subPath") this.mergeSubPaths(connection1, newConnection2);
+    if(connection1.type == "subPath" && newConnection2.type == "subPath")
+      this.mergeSubPaths(connection1, newConnection2, oneConnectionWasFinal);
     else if (connection1.type == newConnection2.type) {
       return;
     }
@@ -242,14 +250,11 @@ export class GameState {
     subPath.signs = [];
   }
   
-  mergeSubPaths (subPath1, subPath2) {
-    let index;
+  mergeSubPaths (subPath1, subPath2, useSmallestIndex) {
+    let index = subPath2.index;
     
-    if(subPath1.signs.length >= subPath2.signs.length) {
+    if((subPath1.signs.length >= subPath2.signs.length) && !useSmallestIndex || (useSmallestIndex && subPath1.index < subPath2.index) ) {
       index = subPath1.index;
-    }
-    else {
-      index = subPath2.index;
     }
     
     subPath1.signs = subPath1.signs.concat(subPath2.signs);
@@ -334,7 +339,7 @@ export class GameState {
   
   createSubPath (signs, customIndex) {
     if(!Array.isArray(signs[0])) signs = [signs];
-    let index = customIndex ? customIndex : this.findSmallesSubPathIndex();
+    let index = customIndex ? customIndex : this.findSmallestSubPathIndex();
     let connection = {
       type: "subPath",
       index,
@@ -344,7 +349,7 @@ export class GameState {
     return connection;
   }
   
-  findSmallesSubPathIndex () {
+  findSmallestSubPathIndex () {
     let smallest = 0;
     let searching = true;
     while(searching) {
@@ -360,6 +365,20 @@ export class GameState {
     }
     
     return smallest;
+  }
+  
+  resolveFinalConnections (){
+    for (let connection of this.connections) {
+      if(connection.type != "final" || connection.signs.length < 1) continue;
+      let lookingFor = connection.startAt + connection.signs.length;
+      for(let matchingConnection of this.connections) {
+        if(matchingConnection.type != "final" || matchingConnection.signs.length < 1) continue;
+        let matchingSignNumber = Number(matchingConnection.startAt);
+        if(lookingFor==matchingSignNumber) {
+          this.mergeFromFinalConnection(connection, matchingConnection)
+        }
+      }
+    }
   }
   
   deleteUnusedConnections () {
@@ -414,6 +433,8 @@ export class InteractionEngine {
   type = null;
   startTile = null;
   
+  mustUndo = false;
+  
   constructor (renderer, gameState) {
     this.renderer = renderer;
     this.gameState = gameState;
@@ -425,6 +446,7 @@ export class InteractionEngine {
   }
   
   interactionInit () {
+    this.mustUndo = false;
     this.type = {long: "pointed", short: "pointing"}[this.interaction.type];
     this.activeSign = this.evaluateSign(this.interaction.startX, this.interaction.startY);
     
@@ -442,9 +464,14 @@ export class InteractionEngine {
   
   interactionMove () {
     if(!this.activeSign) return;
+    if(this.mustUndo) this.gameState.undo();
+    this.gameState.connect(this.activeSign, this.evaluateSign(this.interaction.x, this.interaction.y))
+    this.mustUndo = true;
+    this.display();
   }
   
   interactionEnd () {
+    if(this.mustUndo) this.gameState.undo()
     this.gameState.highlight = null;
     if(this.activeSign){
       this.gameState.connect(this.activeSign, this.evaluateSign(this.interaction.x, this.interaction.y))
