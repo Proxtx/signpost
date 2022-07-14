@@ -85,10 +85,8 @@ export class GameState {
     this.grid[signCoords[0]][signCoords[1]].dim = false;
     for(let x in this.grid){
       for(let y in this.grid[x]){
-        let pointedSigns = this.followSignDirection([x, y]);
-        for(let pointedSign of pointedSigns){
-          if(pointedSign[0] == signCoords[0] && pointedSign[1] == signCoords[1]) this.grid[x][y].dim = false;
-        }
+        if(this.hits([x, y], signCoords))
+          this.grid[x][y].dim = false;
       }
     }
   }
@@ -189,6 +187,7 @@ export class GameState {
   
   connect (sign1, sign2) {
     this.dulplicateGameState();
+    
     if(!sign2) this.freeSign(sign1);
     else if(this.hits(sign1, sign2)){
       this.findAndExecuteConnectMethod(sign1, sign2)
@@ -196,6 +195,7 @@ export class GameState {
     
     this.resolveFinalConnections();
     this.deleteUnusedConnections();
+    this.assignMissingSubPathIndexes();
   }
   
   findAndExecuteConnectMethod (sign1, sign2) {
@@ -229,11 +229,11 @@ export class GameState {
   }
   
   mergeConnections (connection1, connection2, index1, index2) {
-    let oneConnectionWasFinal = connection1.type == "final" || connection2.type == "final"
     let newConnection1 = this.splitConnection(index1+1, connection1);
     let newConnection2 = this.splitConnection(index2, connection2);
-    if(connection1.type == "subPath" && newConnection2.type == "subPath")
-      this.mergeSubPaths(connection1, newConnection2, oneConnectionWasFinal);
+    if(connection1.type == "subPath" && newConnection2.type == "subPath"){
+      this.mergeSubPaths(connection1, newConnection2);
+    }
     else if (connection1.type == newConnection2.type) {
       return;
     }
@@ -256,10 +256,10 @@ export class GameState {
     subPath.signs = [];
   }
   
-  mergeSubPaths (subPath1, subPath2, useSmallestIndex) {
+  mergeSubPaths (subPath1, subPath2) {
     let index = subPath2.index;
     
-    if((subPath1.signs.length >= subPath2.signs.length) && !useSmallestIndex || (useSmallestIndex && subPath1.index < subPath2.index) ) {
+    if((subPath1.signs.length >= subPath2.signs.length) || subPath2.index == undefined || subPath2.index == null) {
       index = subPath1.index;
     }
     
@@ -291,10 +291,10 @@ export class GameState {
       return this.createSubPath(splitSigns);
     }
     else {
-      let subPath = this.createSubPath(connection.signs);
-      connection.signs = splitSigns;
-      connection.startAt = this.evaluateStartNumerOfFinalConnection(splitSigns);
-      return connection;
+      let newFinalConnection = this.createFinalConnection(splitSigns);
+      connection.type = "subPath";
+      delete connection.startAt;
+      return newFinalConnection;
     }
     
   }
@@ -331,24 +331,20 @@ export class GameState {
   }
   
   splitSubPath(split, connection) {
-    let splitSigns;
-    if(connection.signs.length - split > split) {
-      splitSigns = connection.signs.splice(0, split)
-      this.createSubPath(splitSigns);
-      return connection;
+    let newPath = this.createSubPath(connection.signs.splice(split));
+    if(newPath.signs.length > connection.signs.length) {
+      let tempNewIndex = newPath.index;
+      newPath.index = connection.index;
+      connection.index = tempNewIndex;
     }
-    else {
-      splitSigns = connection.signs.splice(split);
-      return this.createSubPath(splitSigns)
-    }
+    
+    return newPath;
   }
   
   createSubPath (signs, customIndex) {
     if(!Array.isArray(signs[0])) signs = [signs];
-    let index = customIndex ? customIndex : this.findSmallestSubPathIndex();
     let connection = {
       type: "subPath",
-      index,
       signs
     }
     this.connections.push(connection)
@@ -387,6 +383,13 @@ export class GameState {
     }
   }
   
+  assignMissingSubPathIndexes () {
+    for(let connection of this.connections) {
+      if(connection.type != "subPath" || connection.index || connection.index == 0) continue;
+      connection.index = this.findSmallestSubPathIndex();
+    }
+  }
+  
   deleteUnusedConnections () {
     for(let connectionIndex = 0; connectionIndex < this.connections.length;connectionIndex++) {
       let connection = this.connections[connectionIndex];
@@ -405,21 +408,9 @@ export class GameState {
   
   hits (sign1, sign2) {
     let hits = false;
-    let multiplier = 1;
-    let arrowDirection = this.grid[sign1[0]][sign1[1]].arrowDirection;
-    
-    if(!arrowDirection) return false;
-    
-    while(true) {
-      let coords = [sign1[0]+multiplier*arrowDirection[0], sign1[1]+multiplier*arrowDirection[1]];
-      if(!this.grid[coords[0]]?.[coords[1]]) break;
-      if(coords[0] == sign2[0] && coords[1] == sign2[1]) {
-        hits = true;
-        break;
-      }
-      
-      multiplier++;
-    }
+    let signs = this.followSignDirection(sign1);
+    if(!signs) return hits;
+    for(let sign of signs) if(sign[0] == sign2[0] && sign[1] == sign2[1]) hits = true;
     
     return hits;
   }
@@ -471,18 +462,29 @@ export class InteractionEngine {
   interactionMove () {
     if(!this.activeSign) return;
     if(this.mustUndo) this.gameState.undo();
-    this.gameState.connect(this.activeSign, this.evaluateSign(this.interaction.x, this.interaction.y))
-    this.mustUndo = true;
-    this.display();
+    this.mustUndo = this.connectCurrentPosition();
   }
   
   interactionEnd () {
     if(this.mustUndo) this.gameState.undo()
     this.gameState.highlight = null;
-    if(this.activeSign){
-      this.gameState.connect(this.activeSign, this.evaluateSign(this.interaction.x, this.interaction.y))
+    this.connectCurrentPosition();
+  }
+  
+  connectCurrentPosition (){
+    let currentSign = this.evaluateSign(this.interaction.x, this.interaction.y)
+    if(this.activeSign && this.type == "pointing"){
+      this.gameState.connect(this.activeSign, currentSign)
     }
+    else if(currentSign && this.type == "pointed") {
+      this.gameState.connect(currentSign, this.activeSign)
+    }
+    else {
+      return false;
+    }
+    
     this.display();
+    return true;
   }
   
   evaluateSign (x, y) {
@@ -563,9 +565,10 @@ export class Interaction {
   }
   
   handleEnd () {
+    clearTimeout(this.timeout);
+    if(!this.type) return;
     this.type = null;
-    this.active = null;
-    clearTimeout(this.timeout)
+    this.active = false;
     this.end && this.end(this)
   }
   
