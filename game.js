@@ -58,6 +58,9 @@ export class GameState {
           ]
       })
     }
+    
+    this.apply();
+    this.cleanConnections();
   }
   
   apply () {
@@ -212,6 +215,10 @@ export class GameState {
       this.findAndExecuteConnectMethod(sign1, sign2)
     }
     
+    this.cleanConnections();
+  }
+  
+  cleanConnections () {
     this.resolveFinalConnections();
     this.deleteUnusedConnections();
     this.assignMissingSubPathIndexes();
@@ -439,12 +446,7 @@ export class GameState {
   
   hasWon () {
     if(this.connections.length == 1) return true;
-    let signCount = 0;
-    for(let connection of this.connections){
-      if(connection.type == "final") signCount += connection.signs.length;
-    }
-    
-    if(signCount >= this.generateResult.path.length) return true;
+    return false;
   }
 }
 

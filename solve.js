@@ -24,7 +24,7 @@ const createGivenFromUnknown = (gameState) => {
     for(let x in gameState.grid) {
       for(let y in gameState.grid[x]) {
         let sign = gameState.grid[x][y];
-        if(!sign.pointed || !sign.pointing){
+        if((!sign.pointed || !sign.pointing ) && !sign.final){
           possibleSigns.push([x, y])
         }
       }
@@ -32,7 +32,16 @@ const createGivenFromUnknown = (gameState) => {
     
     if(possibleSigns.length < 1) return
     
-    let sign = possibleSigns[random(0, possibleSigns.length-1)]
+    let sign
+    let alreadyGiven = true;
+    while(alreadyGiven) {
+      sign = possibleSigns[random(0, possibleSigns.length-1)]
+      
+      alreadyGiven = false;
+      for(let givenObj of gameState.given) {
+        if(sign[0] == givenObj.sign[0] && sign[1] == givenObj.sign[1]) alreadyGiven = true;
+      }
+    }
     
     console.log(possibleSigns, gameState.hasWon(), sign)
     
@@ -84,10 +93,10 @@ const solveStep = (gameState) => {
           }
         }
       }
+      
+      gameState.apply()
     }
   }
-  
-  gameState.apply();
   
   for(let x in gameState.grid) {
     for(let y in gameState.grid[x]) {
@@ -98,10 +107,10 @@ const solveStep = (gameState) => {
       }
       if(possibleSigns.length == 1) 
         gameState.connect(possibleSigns[0], [x, y])
+        
+      gameState.apply();
     }
   }
-  
-  gameState.apply();
 }
 
 const canHit = (sign1, sign2, gameState) => {
