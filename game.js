@@ -424,6 +424,8 @@ export class GameState {
         connectionIndex--;
       }
     }
+    
+    console.log(JSON.stringify(this.connections))
   }
   
   hits (sign1, sign2) {
@@ -436,7 +438,13 @@ export class GameState {
   }
   
   hasWon () {
-    return this.connections.length == 1;
+    if(this.connections.length == 1) return true;
+    let signCount = 0;
+    for(let connection of this.connections){
+      if(connection.type == "final") signCount += connection.signs.length;
+    }
+    
+    if(signCount >= this.generateResult.path.length) return true;
   }
 }
 
