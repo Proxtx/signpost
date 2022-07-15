@@ -1,3 +1,5 @@
+import { adjustGiven } from "./solve.js"
+
 export class GameState {
   gameStates = [
    [
@@ -37,6 +39,13 @@ export class GameState {
         column[signIndex] = {...column[signIndex], ...this.resetDefault}
       }
     }
+  }
+  
+  resetGame () {
+    this.gameStates = [[]];
+    this.gameStateIndex = 0;
+    this.loadGameState();
+    this.createGivenConnections();
   }
   
   createGivenConnections () {
@@ -83,12 +92,22 @@ export class GameState {
   applyPointedHighlight (signCoords) {
     this.applyDim();
     this.grid[signCoords[0]][signCoords[1]].dim = false;
+    let pointed = this.findPointedSigns(signCoords);
+    for(let coords of pointed){
+      this.grid[coords[0]][coords[1]].dim = false;
+    }
+  }
+  
+  findPointedSigns (signCoords) {
+    let pointed = [];
     for(let x in this.grid){
       for(let y in this.grid[x]){
         if(this.hits([x, y], signCoords))
-          this.grid[x][y].dim = false;
+          pointed.push([x, y]);
       }
     }
+    
+    return pointed;
   }
   
   applyDim () {
@@ -246,6 +265,7 @@ export class GameState {
   }
   
   mergeOntoFinalConnection (finalConnection, subPath) {
+    if(finalConnection.startAt <= 1) return;
     finalConnection.signs = subPath.signs.concat(finalConnection.signs);
     finalConnection.startAt -= subPath.signs.length;
     subPath.signs = [];
@@ -414,6 +434,10 @@ export class GameState {
     
     return hits;
   }
+  
+  hasWon () {
+    return this.connections.length == 1;
+  }
 }
 
 export class Game {
@@ -421,7 +445,8 @@ export class Game {
     this.generateResult = generateResult;
     this.renderer = renderer;
     this.gameState = new GameState(this.generateResult);
-    this.InteractionEngine = new InteractionEngine(this.renderer, this.gameState)
+    adjustGiven(this.gameState, this.renderer)
+    this.InteractionEngine = new InteractionEngine(this.renderer, this.gameState);
   }
 }
 
