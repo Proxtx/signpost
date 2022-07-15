@@ -1,11 +1,11 @@
 import { random } from "./generate.js";
 
-export const adjustGiven = async (gameState, renderer) => {
+export const adjustGiven = (gameState) => {
   let searching = true;
   let iteration = 0
   while (searching && iteration < 50) {
     gameState.resetGame();
-    await solve(gameState, renderer)
+    solve(gameState)
     if(gameState.hasWon()) searching = false;
     
     if(searching) {
@@ -14,8 +14,8 @@ export const adjustGiven = async (gameState, renderer) => {
     
     iteration++;
   }
-  gameState.apply();
-  renderer.render();
+  
+  gameState.resetGame();
 }
 
 const createGivenFromUnknown = (gameState) => { 
@@ -43,8 +43,6 @@ const createGivenFromUnknown = (gameState) => {
       }
     }
     
-    console.log(possibleSigns, gameState.hasWon(), sign)
-    
     let pathIndex;
     for(let matchingSignIndex in gameState.generateResult.path) {
       let pathSign = gameState.generateResult.path[matchingSignIndex];
@@ -57,8 +55,7 @@ const createGivenFromUnknown = (gameState) => {
     })
 }
 
-const solve = async (gameState, renderer) => {
-  console.log("solving")
+const solve = (gameState) => {
   gameState.apply();
   
   let lastSaveState;
@@ -69,10 +66,6 @@ const solve = async (gameState, renderer) => {
     let connectionSaveState = JSON.stringify(gameState.connections);
     if(lastSaveState == connectionSaveState) solving = false;
     lastSaveState = connectionSaveState;
-  
-  renderer.render();
-  
-  await new Promise(r => setTimeout(r, 1000))
   }
 }
 

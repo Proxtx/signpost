@@ -19,7 +19,7 @@ export class GridRenderer {
     signTextSubPath: "#000000",
     used: 0.45,
     unused: "#9C9A9C",
-    subPathColors: ["#FF9E7B", "#94FB94", "#7BFFD6", "#946DDE", "#FFA600", "#84CEF7"],
+    subPathColors: ["#FF9E7B", "#94FB94", "#7BFFD6", "#946DDE", "#FFA600", "#84CEF7", "#FFFF00", "#FFCEBD"],
     finalBackground: "#000000",
     error: "#FF0000",
     given: "#ADAAFF",

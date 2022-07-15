@@ -431,8 +431,6 @@ export class GameState {
         connectionIndex--;
       }
     }
-    
-    console.log(JSON.stringify(this.connections))
   }
   
   hits (sign1, sign2) {
@@ -455,7 +453,7 @@ export class Game {
     this.generateResult = generateResult;
     this.renderer = renderer;
     this.gameState = new GameState(this.generateResult);
-    adjustGiven(this.gameState, this.renderer)
+    adjustGiven(this.gameState)
     this.InteractionEngine = new InteractionEngine(this.renderer, this.gameState);
   }
 }
