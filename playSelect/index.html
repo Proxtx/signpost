@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Signpost</title>
+  </head>
+  <body>
+    <input id="width" type="number" value="4" /><br />
+    <input id="height" type="number" value="4" /><br />
+    <input id="corners" type="checkbox" checked /><a>Corners</a><br />
+    <button
+      onclick="localStorage.width = document.getElementById('width').value; localStorage.height = document.getElementById('height').value; localStorage.corners = document.getElementById('corners').checked; location.pathname += '../' "
+    >
+      Play
+    </button>
+  </body>
+</html>
