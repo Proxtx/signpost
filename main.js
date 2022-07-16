@@ -18,5 +18,6 @@ const renderer = new GridRenderer(canvas, 70, 0, generateResult.grid, image);
 
 const game = new Game(renderer, generateResult);
 window.gameState = game.gameState;
+window.renderer.renderer;
 
 renderer.render();
