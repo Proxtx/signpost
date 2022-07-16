@@ -10,7 +10,10 @@
   <body>
     <canvas id="canvas"></canvas>
     <br />
-    <a href="playSelect">Play Again</a>
+    <button onclick="window.gameState.undo()">Undo</button
+    ><button onclick="window.gameState.redo()">Redo</button>
+    <br />
+    <a href="./">Play Again</a><a href="playSelect">Change Settings</a>
     <script src="main.js" type="module"></script>
   </body>
 </html>
